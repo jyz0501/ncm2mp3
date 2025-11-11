@@ -17,7 +17,13 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
+        cache: 'pnpm'  # 明确指定使用 pnpm 缓存
+        cache-dependency-path: 'pnpm-lock.yaml'  # 指定锁定文件路径
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
         
     - name: Install macOS dependencies
       run: |
@@ -29,33 +35,15 @@ jobs:
         toolchain: stable
         targets: x86_64-apple-darwin
         
-    - name: Verify project structure
-      run: |
-        echo "=== Project Structure ==="
-        pwd
-        ls -la
-        echo "=== src-tauri Contents ==="
-        ls -la src-tauri/
-        echo "=== src-tauri/src Contents ==="
-        ls -la src-tauri/src/
-        echo "=== Cargo.toml Content ==="
-        cat src-tauri/Cargo.toml
-        
-    - name: Install npm dependencies
-      run: npm install
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile  # 强制使用 pnpm-lock.yaml
       
     - name: Build frontend
-      run: npm run build
+      run: pnpm build
       
     - name: Build Tauri app
-      run: |
-        # 检查 cargo 是否能找到项目
-        cd src-tauri
-        cargo metadata --format-version 1
-        cargo build --release
-        cd ..
-        npm run tauri build
-        
+      run: pnpm tauri build
+      
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
