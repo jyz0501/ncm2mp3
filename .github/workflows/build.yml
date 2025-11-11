@@ -13,30 +13,33 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup Node.js
+    - name: Install Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'pnpm'  # 明确指定使用 pnpm 缓存
         
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 8
+    - name: Install pnpm globally
+      run: |
+        npm install -g pnpm@8
+        echo "PNPM version:"
+        pnpm --version
         
     - name: Install macOS dependencies
       run: |
         brew install pkg-config
         
-    - name: Setup Rust
-      uses: actions-rust-lang/setup-rust-toolchain@v1
-      with:
-        toolchain: stable
-        targets: x86_64-apple-darwin
+    - name: Install Rust
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        echo "##[add-path]$HOME/.cargo/bin"
+        echo "##[set-env name=PATH]$PATH:$HOME/.cargo/bin"
+        source $HOME/.cargo/env
+        rustup target add x86_64-apple-darwin
         
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile  # 强制使用 pnpm-lock.yaml
-      
+    - name: Install project dependencies
+      run: |
+        pnpm install
+        
     - name: Build frontend
       run: pnpm build
       
