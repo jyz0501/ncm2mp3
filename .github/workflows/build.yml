@@ -13,24 +13,48 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup Node
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: '18'
+        cache: 'npm'
         
-    - name: Install Rust
+    - name: Install macOS dependencies
+      run: |
+        brew install pkg-config
+        brew install webkit2gtk
+        
+    - name: Setup Rust
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
         toolchain: stable
+        targets: x86_64-apple-darwin
         
-    - name: Install dependencies (macOS)
+    - name: Verify project structure
       run: |
-        brew install pkg-config
+        echo "Current directory: $(pwd)"
+        ls -la
+        echo "Checking src-tauri directory:"
+        ls -la src-tauri/
         
-    - name: Build the app
-      uses: tauri-apps/tauri-action@v0
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install dependencies
+      working-directory: ./src-tauri
+      run: cargo check
+      
+    - name: Install npm dependencies
+      run: npm install
+      
+    - name: Build frontend
+      run: npm run build
+      
+    - name: Build Tauri app
+      run: npm run tauri build
+      
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
       with:
-        projectPath: './'
-        includeDebug: false
+        name: ncm2mp3-app
+        path: |
+          src-tauri/target/release/
+          src-tauri/target/release/bundle/
+        retention-days: 30
