@@ -1,86 +1,64 @@
-name: Build Tauri App - Debug
+name: Build Tauri App
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build-tauri:
     runs-on: macos-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: Debug system info
-      run: |
-        echo "System information:"
-        uname -a
-        sw_vers
-        echo "Node version:"
-        node --version || echo "Node not installed"
-        echo "npm version:"
-        npm --version || echo "npm not installed"
-        
-    - name: Install Node.js
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+        cache: 'npm'
         
-    - name: Verify Node.js installation
+    - name: Install macOS dependencies
       run: |
-        echo "Node.js path:"
-        which node
-        echo "npm path:"
-        which npm
-        node --version
-        npm --version
+        brew install pkg-config webkit2gtk
         
-    - name: Install Rust
-      run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-        source $HOME/.cargo/env
-        rustc --version
-        cargo --version
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+        targets: x86_64-apple-darwin
         
-    - name: Install build dependencies
+    - name: Verify project structure
       run: |
-        # 安装 Tauri 构建依赖
-        brew install pkg-config
-        # 尝试安装其他可能的依赖
-        brew install openssl || echo "OpenSSL already installed"
-        
-    - name: Install project dependencies
-      run: |
-        echo "Current directory:"
+        echo "=== Project Structure ==="
         pwd
         ls -la
-        echo "Installing npm dependencies..."
-        npm install
+        echo "=== src-tauri Contents ==="
+        ls -la src-tauri/
+        echo "=== src-tauri/src Contents ==="
+        ls -la src-tauri/src/
+        echo "=== Cargo.toml Content ==="
+        cat src-tauri/Cargo.toml
         
+    - name: Install npm dependencies
+      run: npm install
+      
     - name: Build frontend
-      run: |
-        echo "Building frontend..."
-        npm run build
-        echo "Frontend build completed"
-        
+      run: npm run build
+      
     - name: Build Tauri app
       run: |
-        echo "Building Tauri app..."
-        npx tauri build --verbose
-        echo "Tauri build completed"
+        # 检查 cargo 是否能找到项目
+        cd src-tauri
+        cargo metadata --format-version 1
+        cargo build --release
+        cd ..
+        npm run tauri build
         
-    - name: Check build results
-      run: |
-        echo "Build results:"
-        find src-tauri/target -name "*.app" -o -name "*.dmg" | head -10
-        ls -la src-tauri/target/release/ || echo "No release directory"
-        
-    - name: Upload all artifacts
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: build-output
-        path: |
-          src-tauri/target/release/
-          src-tauri/target/release/bundle/
+        name: ncm2mp3-app
+        path: src-tauri/target/release/bundle/
         retention-days: 30
