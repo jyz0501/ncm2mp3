@@ -17,44 +17,41 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup Node
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: '18'
         cache: 'pnpm'
     
     - name: Setup pnpm
       uses: pnpm/action-setup@v2
       with:
         version: 8
-    
-    - name: install dependencies (ubuntu only)
-      if: matrix.platform == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libwebkit2gtk-4.0-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
-    
-    - name: install dependencies (macos only)
+        run_install: false
+        
+    - name: Install macOS dependencies
       if: matrix.platform == 'macos-latest'
       run: |
         brew install pkg-config
         
-    - name: install Rust
-      run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        source "$HOME/.cargo/env"
-        rustup target add x86_64-apple-darwin
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+        targets: x86_64-apple-darwin
         
-    - name: install frontend dependencies
+    - name: Install dependencies
       run: pnpm install
       
-    - name: build frontend
+    - name: Build frontend
       run: pnpm build
       
-    - name: build Tauri app
+    - name: Build Tauri app
       run: pnpm tauri build
       
-    - uses: actions/upload-artifact@v4
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
       with:
-        name: ncm2mp3-app
+        name: ncm2mp3-app-macos
         path: src-tauri/target/release/bundle/
+        retention-days: 30
